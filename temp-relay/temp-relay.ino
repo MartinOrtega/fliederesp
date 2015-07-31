@@ -13,20 +13,12 @@
 #define TEMP_MIN "tempMin"
 #define TEMP_MAX "tempMax"
 #define RUN_MODE "runMode"
-#define ESP_SSID "espSSID"
-#define ESP_PASS "espPASS"
 
 // WIFI DECLARATION
-char* ssid;
-char* password;
+char* ssid = "Munis Red";
+char* password = "32144584";
 ESP8266WebServer server(80);
 String errors = "";
-
-struct WifiData {
-  char ssid[32];
-  char pass[64];
-};
-
 
 // SYSTEM VARIABLES
 float temp;
@@ -49,7 +41,6 @@ boolean relayON = false;
 #define tempMaxAddr 10
 #define tempAdjustmentAddr 20
 #define runModeAddr 30
-#define wifiDataAddr 100
 
 void setup()
 {
@@ -88,22 +79,6 @@ void eepromInit() {
   EEPROM_readAnything(tempMaxAddr, tempMax);
   EEPROM_readAnything(tempAdjustmentAddr, tempAdjustment);
   EEPROM_readAnything(runModeAddr, runMode);
-
-//  WifiData wd1;
-//  String ssid2 = "Munis Red";
-//  String pass2 = "32144584";
-//  ssid2.toCharArray(wd1.ssid, 32);
-//  pass2.toCharArray(wd1.pass, 64);
-//  
-//  Serial.println((String)"Escribiendo: " + wd1.ssid + " |||| " + wd1.pass);
-//
-//  EEPROM_writeAnything(wifiDataAddr, wd1);
-
-  WifiData wifiData;
-  EEPROM_readAnything(wifiDataAddr, wifiData);
-  ssid = wifiData.ssid;
-  password = wifiData.pass;
-  Serial.println((String)"SSID: " + ssid + " | PASS: " + password);
 }
 
 void wifiConnect() {
@@ -202,45 +177,7 @@ void handleConf() {
 }
 
 void handleWifiConf() {
-  Serial.println("-------------------");
-  Serial.println("Edit Wifi Config");
-
-  String recievedSSID;
-  String recievedPASS;
-
-  if (server.args() == 0) {
-    Serial.println("BAD ARGS");
-    return returnFail("BAD ARGS");
-  }
-
-  if (server.hasArg(ESP_SSID)) {
-    recievedSSID = server.arg(ESP_SSID);
-    if (recievedSSID == "") {
-      Serial.println("SSID can't be null");
-      return returnFail("SSID can't be null");
-    }
-  }
-
-  if (server.hasArg(ESP_PASS)) {
-    recievedPASS = server.arg(ESP_PASS);
-    if (recievedPASS == "") {
-      Serial.println("PASS can't be null");
-      return returnFail("PASS can't be null");
-    }
-  }
-
-  WifiData wifiData;
-
-  recievedSSID.toCharArray(wifiData.ssid, 32);
-  recievedPASS.toCharArray(wifiData.pass, 64);
-
-  Serial.println((String)wifiData.ssid + " " + wifiData.pass);
-
-  EEPROM_writeAnything(wifiDataAddr, wifiData);
-
-  Serial.println("OK - New SSID = " + recievedSSID + " | New PASS = " + recievedPASS);
-
-  returnOK();
+  server.send(200, "text/json", "{SSID:" + ssid + ",PASS:" + password + "}");
 }
 
 void handleEditTempMin() {
