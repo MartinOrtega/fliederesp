@@ -42,8 +42,7 @@ boolean relayON = false;
 #define tempAdjustmentAddr 20
 #define runModeAddr 30
 
-void setup()
-{
+void setup() {
   delay(1000);
   eepromInit();
 
@@ -64,11 +63,11 @@ void setup()
   serverInit();
 }
 
-void loop()
-{
+void loop() {
   server.handleClient();
   senseTemp();
   toogleRelay();
+  checkConnection();
 }
 
 void eepromInit() {
@@ -304,4 +303,10 @@ boolean turnOnRelay() {
   //Si no pasa nada de lo anterior devuelvo true
   //(significa que la temp tiene que seguir bajando)
   return relayON;
+}
+
+void checkConnection() {
+  if (WiFi.status() != WL_CONNECTED) {
+    wifiConnect();
+  }
 }
