@@ -69,7 +69,6 @@ void loop()
   server.handleClient();
   senseTemp();
   toogleRelay();
-  checkConnection();
 }
 
 void eepromInit() {
