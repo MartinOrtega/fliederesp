@@ -1,7 +1,6 @@
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
-#include <ESP8266mDNS.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
 #include <EEPROM.h>
@@ -66,10 +65,17 @@ void setup()
 
 void loop()
 {
-  server.handleClient();
   senseTemp();
   toogleRelay();
-  checkConnection();
+  handleWebServer();
+}
+
+void handleWebServer() {
+  if (WiFi.status() == WL_CONNECTED) {
+    server.handleClient();
+  } else {
+    wifiConnect();
+  }
 }
 
 void eepromInit() {
@@ -177,7 +183,7 @@ void handleConf() {
 }
 
 void handleWifiConf() {
-  server.send(200, "text/json", "{SSID:" + ssid + ",PASS:" + password + "}");
+  server.send(200, "text/json", (String) "{SSID:" + ssid + ",PASS:" + password + "}");
 }
 
 void handleEditTempMin() {
@@ -302,7 +308,6 @@ boolean turnOnRelay() {
     return false;
   }
 
-  //Si no pasa nada de lo anterior devuelvo true
-  //(significa que la temp tiene que seguir bajando)
+  //Si no pasa nada de lo anterior devuelvo el valor que ya tenia para que siga como estaba
   return relayON;
 }
