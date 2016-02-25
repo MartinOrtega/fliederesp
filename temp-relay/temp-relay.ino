@@ -14,8 +14,8 @@
 #define RUN_MODE "runMode"
 
 // WIFI DECLARATION
-char* ssid = "Munis Red";
-char* password = "32144584";
+const char* ssid = "Munis Red";
+const char* pass = "32144584";
 ESP8266WebServer server(80);
 String errors = "";
 
@@ -40,34 +40,25 @@ boolean relayON = false;
 #define tempMaxAddr 10
 #define tempAdjustmentAddr 20
 #define runModeAddr 30
+#define ssidStartAddr 100
+#define ssidEndAddr 132
+#define passStartAddr 133
+#define passEndAddr 197
 
-void setup()
-{
-  delay(1000);
-  eepromInit();
+void wifiConnect() {
+  // Connect to WiFi network
+  Serial.println((String)"Trying to connect to: " + ssid + " pass: " + pass);
+  WiFi.begin(ssid, pass);
+  Serial.println("");
 
-  Serial.begin(9600);
-  pinMode(relay, OUTPUT);
+  int atemps = 0;
 
-  int i = 0;
-  while (i < 10) {
-    delay(350);
+  // Wait for connection
+  while (WiFi.status() != WL_CONNECTED && atemps < 30) {
+    delay(500);
     Serial.print(".");
-    i++;
+    atemps++;
   }
-
-  DS18B20.begin();
-
-  wifiConnect();
-
-  serverInit();
-}
-
-void loop()
-{
-  senseTemp();
-  toogleRelay();
-  handleWebServer();
 }
 
 void handleWebServer() {
@@ -81,57 +72,47 @@ void handleWebServer() {
 void eepromInit() {
   EEPROM.begin(512);
 
+//  EEPROM_writeAnything(100, "Nessie");
+//  EEPROM_writeAnything(132, "32144584");
+
   EEPROM_readAnything(tempMinAddr, tempMin);
   EEPROM_readAnything(tempMaxAddr, tempMax);
   EEPROM_readAnything(tempAdjustmentAddr, tempAdjustment);
   EEPROM_readAnything(runModeAddr, runMode);
+  ssid = EEPROM_readCharArray(ssidStartAddr, ssidEndAddr);
+  pass = EEPROM_readCharArray(passStartAddr, passEndAddr);
+
+//   // read eeprom for ssid and pass
+//  Serial.println("Reading EEPROM ssid");
+//  String esid;
+//  for (int i = ssidAddr; i < 132; ++i)
+//    {
+//      esid += char(EEPROM.read(i));
+//    }
+//  Serial.print("SSID: ");
+//  Serial.println(esid);
+//  Serial.println("Reading EEPROM pass");
+//  String epass = "";
+//  for (int i = passAddr; i < 196; ++i)
+//    {
+//      epass += char(EEPROM.read(i));
+//    }
+//  Serial.print("PASS: ");
+//  Serial.println(epass);
+//  ssid = esid.c_str();
+//  pass = epass.c_str();
 }
 
-void wifiConnect() {
-  // Connect to WiFi network
-  Serial.println((String)"Trying to connect to: " + ssid + " pass: " + password);
-  WiFi.begin(ssid, password);
-  Serial.println("");
-
-  int atemps = 0;
-
-  // Wait for connection
-  while (WiFi.status() != WL_CONNECTED && atemps < 30) {
-    delay(500);
-    Serial.print(".");
-    atemps++;
-  }
+void returnOK() {
+  server.send(200);
 }
 
-void serverInit() {
-  // Si se conecta a la WIFI setea los recursos de configuracion y medicion de temperatura.
-  // Si no se conecta levanta en modo access point y levanta recurso para configuracion de datos de WIFI.
-  if (WiFi.status() == WL_CONNECTED) {
-    Serial.println("");
-    Serial.print("Connected to ");
-    Serial.println(ssid);
-    Serial.print("IP address: ");
-    Serial.println(WiFi.localIP());
+void fail(String error) {
+  errors += error + " | ";
+}
 
-    server.on("/temp", HTTP_GET, sendTemp);
-    server.on("/conf", HTTP_PUT, handleConf);
-
-    server.begin();
-    Serial.println("HTTP server started");
-  } else {
-    Serial.println("");
-    Serial.println("Failed...");
-    WiFi.disconnect();
-
-    WiFi.softAP("ESPWIFI", "11022302");
-    Serial.println("");
-    Serial.println("Access point ON. SSID: ESPWIFI");
-
-    server.on("/wifiConf", HTTP_PUT, handleWifiConf);
-
-    server.begin();
-    Serial.println("HTTP server started");
-  }
+void returnFail(String error) {
+  server.send(500, "text/json", "{errorcode: " + error + "}");
 }
 
 void sendTemp() {
@@ -149,41 +130,8 @@ void sendTemp() {
   server.send(200, "text/json", jsonToSend);
 }
 
-void handleConf() {
-  Serial.println("*******************");
-  Serial.println("HTTP_PUT a /conf");
-
-  if (server.args() == 0) {
-    Serial.println("BAD ARGS");
-    return returnFail("BAD ARGS");
-  }
-
-  if (server.hasArg(TEMP_MIN)) {
-    handleEditTempMin();
-  }
-
-  if (server.hasArg(TEMP_MAX)) {
-    handleEditTempMax();
-  }
-
-  if (server.hasArg(TEMP_ADJUSTMENT)) {
-    handleTempAdjustment();
-  }
-
-  if (server.hasArg(RUN_MODE)) {
-    handleEditRunMode();
-  }
-
-  if (errors != "") {
-    returnFail(errors);
-  } else {
-    returnOK();
-  }
-  errors = "";
-}
-
 void handleWifiConf() {
-  server.send(200, "text/json", (String) "{SSID:" + ssid + ",PASS:" + password + "}");
+  server.send(200, "text/json", (String) "{SSID:" + ssid + ",PASS:" + pass + "}");
 }
 
 void handleEditTempMin() {
@@ -260,31 +208,73 @@ void handleEditRunMode() {
   }
 }
 
-void returnOK() {
-  server.send(200);
+void handleConf() {
+  Serial.println("*******************");
+  Serial.println("HTTP_PUT a /conf");
+
+  if (server.args() == 0) {
+    Serial.println("BAD ARGS");
+    return returnFail("BAD ARGS");
+  }
+
+  if (server.hasArg(TEMP_MIN)) {
+    handleEditTempMin();
+  }
+
+  if (server.hasArg(TEMP_MAX)) {
+    handleEditTempMax();
+  }
+
+  if (server.hasArg(TEMP_ADJUSTMENT)) {
+    handleTempAdjustment();
+  }
+
+  if (server.hasArg(RUN_MODE)) {
+    handleEditRunMode();
+  }
+
+  if (errors != "") {
+    returnFail(errors);
+  } else {
+    returnOK();
+  }
+  errors = "";
 }
 
-void fail(String error) {
-  errors += error + " | ";
-}
+void serverInit() {
+  // Si se conecta a la WIFI setea los recursos de configuracion y medicion de temperatura.
+  // Si no se conecta levanta en modo access point y levanta recurso para configuracion de datos de WIFI.
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("");
+    Serial.print("Connected to ");
+    Serial.println(ssid);
+    Serial.print("IP address: ");
+    Serial.println(WiFi.localIP());
 
-void returnFail(String error) {
-  server.send(500, "text/json", "{errorcode: " + error + "}");
+    server.on("/temp", HTTP_GET, sendTemp);
+    server.on("/conf", HTTP_PUT, handleConf);
+
+    server.begin();
+    Serial.println("HTTP server started");
+  } else {
+    Serial.println("");
+    Serial.println("Failed...");
+    WiFi.disconnect();
+
+    WiFi.softAP("ESPWIFI", "11022302");
+    Serial.println("");
+    Serial.println("Access point ON. SSID: ESPWIFI");
+
+    server.on("/wifiConf", HTTP_PUT, handleWifiConf);
+
+    server.begin();
+    Serial.println("HTTP server started");
+  }
 }
 
 void senseTemp() {
-
   DS18B20.requestTemperatures();
   temp = DS18B20.getTempCByIndex(0) + tempAdjustment;
-}
-
-void toogleRelay() {
-
-  if (turnOnRelay()) {
-    digitalWrite(relay, 1);
-  } else {
-    digitalWrite(relay, 0);
-  }
 }
 
 boolean turnOnRelay() {
@@ -310,4 +300,41 @@ boolean turnOnRelay() {
 
   //Si no pasa nada de lo anterior devuelvo el valor que ya tenia para que siga como estaba
   return relayON;
+}
+
+void toogleRelay() {
+  if (turnOnRelay()) {
+    digitalWrite(relay, 1);
+  } else {
+    digitalWrite(relay, 0);
+  }
+}
+
+void setup()
+{
+  delay(1000);
+  eepromInit();
+
+  Serial.begin(9600);
+  pinMode(relay, OUTPUT);
+
+  int i = 0;
+  while (i < 10) {
+    delay(350);
+    Serial.print(".");
+    i++;
+  }
+
+  DS18B20.begin();
+
+  wifiConnect();
+
+  serverInit();
+}
+
+void loop()
+{
+  senseTemp();
+  toogleRelay();
+  handleWebServer();
 }
