@@ -45,6 +45,7 @@ boolean relayON = false;
 #define passStartAddr 133
 #define passEndAddr 197
 
+
 void wifiConnect() {
   // Connect to WiFi network
   Serial.println((String)"Trying to connect to: " + ssid + " pass: " + pass);
@@ -72,9 +73,6 @@ void handleWebServer() {
 void eepromInit() {
   EEPROM.begin(512);
 
-//  EEPROM_writeAnything(100, "Nessie");
-//  EEPROM_writeAnything(132, "32144584");
-
   EEPROM_readAnything(tempMinAddr, tempMin);
   EEPROM_readAnything(tempMaxAddr, tempMax);
   EEPROM_readAnything(tempAdjustmentAddr, tempAdjustment);
@@ -82,25 +80,6 @@ void eepromInit() {
   ssid = EEPROM_readCharArray(ssidStartAddr, ssidEndAddr);
   pass = EEPROM_readCharArray(passStartAddr, passEndAddr);
 
-//   // read eeprom for ssid and pass
-//  Serial.println("Reading EEPROM ssid");
-//  String esid;
-//  for (int i = ssidAddr; i < 132; ++i)
-//    {
-//      esid += char(EEPROM.read(i));
-//    }
-//  Serial.print("SSID: ");
-//  Serial.println(esid);
-//  Serial.println("Reading EEPROM pass");
-//  String epass = "";
-//  for (int i = passAddr; i < 196; ++i)
-//    {
-//      epass += char(EEPROM.read(i));
-//    }
-//  Serial.print("PASS: ");
-//  Serial.println(epass);
-//  ssid = esid.c_str();
-//  pass = epass.c_str();
 }
 
 void returnOK() {
